@@ -1,0 +1,118 @@
+﻿@page "/pagina1tabla"
+@using System.Net.Http.Json
+@using Concesionario.Data
+@inject HttpClient _client;
+
+<MudText Typo="Typo.h5"><b>INSTRUCCIONES</b></MudText>
+<MudText>Los botones que se observan tienen las siguientes funciones:</MudText>
+<MudText><b>Agregar:</b> Agrega a la tabla un cliente</MudText>
+<MudText><b>Eliminar:</b> Elimina los clientes agregados en orden de mas nuevo a mas viejo,</MudText>
+    <MudText>o tiene la opcion de usar el icono de eliminar en cada fila.</MudText>
+
+<MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" OnClick="GenerarAgregar">Agregar</MudButton>
+
+<MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="GenerarEliminar">Eliminar</MudButton>
+
+<MudDataGrid T="Garaje" Items="@Garajes" ReadOnly="@_readOnly" EditMode="@(_isCellEditMode ? DataGridEditMode.Cell : DataGridEditMode.Form)"
+    StartedEditingItem="@StartedEditingItem" CancelledEditingItem="@CancelledEditingItem" CommittedItemChanges="@CommittedItemChanges"
+    Bordered="true" Dense="true" EditTrigger="@(_editTriggerRowClick ? DataGridEditTrigger.OnRowClick : DataGridEditTrigger.Manual)">
+    <Columns>
+        <Column T="Garaje" Field="serial" Title="Nr" IsEditable="false" />
+        <Column T="Garaje" Field="marca" />
+        <Column T="Garaje" Field="tipo" />
+        <Column T="Garaje" Field="precio" Title="precio"/>
+        <Column T="Garaje" Field="power" Title="HorsePower"/>
+        
+        <Column T="Garaje" Hidden="@(_isCellEditMode || _readOnly || _editTriggerRowClick)" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Outlined.Edit" OnClick="@context.Actions.StartEditingItem" />
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Outlined.Delete" OnClick="(args)=> EliminarEvento(context.Item)" />
+            </CellTemplate>
+        </Column>
+    </Columns>
+</MudDataGrid>
+
+
+
+@code {
+    [Inject] private ISnackbar SnackBarService { get; set; }
+
+    Garaje elemento = new Garaje
+        {
+            marca = "Rolls-Royce",
+            serial = 100,
+            tipo = "SUV",
+            precio = 1222,
+            power = 200
+        };
+    //Boton
+    private async void GenerarAgregar()
+    {
+        SnackBarService.Add("Se agregó el Carro", Severity.Success);
+        
+        ((List<Garaje>)Garajes).Add(elemento);
+        StateHasChanged();
+    }
+   
+
+    private async void GenerarEliminar()
+    {
+        SnackBarService.Add("Se eliminó el Carro", Severity.Error);
+        
+        ((List<Garaje>)Garajes).Remove(elemento);
+        StateHasChanged();
+    }
+
+
+
+    //Taabla
+    private IEnumerable<Garaje> Garajes = new List<Garaje>();
+    private bool _readOnly;
+    private bool _isCellEditMode;
+    private List<string> _events = new();
+    private bool _editTriggerRowClick;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var elemento = new List<Garaje>();
+        _client.BaseAddress = new Uri("https://localhost:7100/");
+        var requestMessage = new HttpRequestMessage(HttpMethod.Get, "Garaje/ConsultarGaraje");
+        var respuesta = await _client.SendAsync(requestMessage);
+
+        if(respuesta.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            var responseBody = await respuesta.Content.ReadAsStringAsync();
+            var listasGaraje = System.Text.Json.JsonSerializer.Deserialize<List<Garaje>>(responseBody);
+            Garajes = listasGaraje;
+        }
+
+
+
+    }
+
+    void EliminarEvento(Garaje item)
+    {
+        SnackBarService.Add("Se eliminó el Carro", Severity.Error);
+        
+        ((List<Garaje>)Garajes).Remove(elemento);
+        StateHasChanged();
+
+    }
+
+    // events
+    void StartedEditingItem(Garaje item)
+    {
+        _events.Insert(0, $"Event = StartedEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    }
+
+    void CancelledEditingItem(Garaje item)
+    {
+        _events.Insert(0, $"Event = CancelledEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    }
+    //este servira para guardar o actualizar registros
+    void CommittedItemChanges(Garaje item)
+    {
+        _events.Insert(0, $"Event = CommittedItemChanges, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+        SnackBarService.Add("Se editó el Carro", Severity.Warning);
+    }
+}

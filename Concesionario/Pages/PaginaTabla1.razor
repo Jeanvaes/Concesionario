@@ -3,6 +3,7 @@
 @using Concesionario.Data
 @inject HttpClient _client;
 
+
 <MudText Typo="Typo.h5"><b>INSTRUCCIONES</b></MudText>
 <MudText>Los botones que se observan tienen las siguientes funciones:</MudText>
 <MudText><b>Agregar:</b> Agrega a la tabla un cliente</MudText>
@@ -49,16 +50,23 @@
     private async void GenerarAgregar()
     {
         SnackBarService.Add("Se agregó el Carro", Severity.Success);
-        
+
         ((List<Garaje>)Garajes).Add(elemento);
+        var requestMessage = new HttpRequestMessage(HttpMethod.Post, "Garaje/AgregarGaraje?marca=Rolls-Royce&precio=1222&tipo=SUV&power=200");
+        await _client.SendAsync(requestMessage);
         StateHasChanged();
+
+
+
     }
-   
+
 
     private async void GenerarEliminar()
     {
         SnackBarService.Add("Se eliminó el Carro", Severity.Error);
         
+        var requestMessage = new HttpRequestMessage(HttpMethod.Delete, "Garaje/BorrarGaraje?serial=21");
+        await _client.SendAsync(requestMessage);
         ((List<Garaje>)Garajes).Remove(elemento);
         StateHasChanged();
     }
@@ -90,10 +98,10 @@
 
     }
 
-    void EliminarEvento(Garaje item)
+    private async void EliminarEvento(Garaje item)
     {
         SnackBarService.Add("Se eliminó el Carro", Severity.Error);
-        
+
         ((List<Garaje>)Garajes).Remove(elemento);
         StateHasChanged();
 
@@ -103,6 +111,7 @@
     void StartedEditingItem(Garaje item)
     {
         _events.Insert(0, $"Event = StartedEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    
     }
 
     void CancelledEditingItem(Garaje item)
